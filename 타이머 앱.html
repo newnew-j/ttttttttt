@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>도시 파괴 타이머</title>
+<style>
+  body {
+    margin: 0;
+    background: linear-gradient(#d9a679, #5a5a5a);
+    font-family: Arial, sans-serif;
+    color: white;
+    text-align: center;
+    overflow: hidden;
+  }
+  #timer {
+    font-size: 60px;
+    margin-top: 20px;
+  }
+  .buttons {
+    margin: 20px;
+  }
+  button {
+    font-size: 20px;
+    margin: 5px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: #333;
+    color: white;
+    cursor: pointer;
+  }
+  button:hover {
+    background-color: #555;
+  }
+  input[type="number"] {
+    width: 80px;
+    font-size: 18px;
+    padding: 5px;
+    border-radius: 5px;
+    border: none;
+    text-align: center;
+  }
+  #robot, #bomb, #mushroom, #building {
+    position: absolute;
+    transition: all 1s ease;
+  }
+  #robot {
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 300px;
+    background: url('robot.png') no-repeat center/contain;
+  }
+  #building {
+    bottom: 50px;
+    left: 20%;
+    width: 200px;
+    height: 400px;
+    background: linear-gradient(#999, #444);
+    border: 5px solid #222;
+  }
+  #bomb {
+    top: -150px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, #ff0000 40%, #660000 100%);
+    border-radius: 50%;
+    display: none;
+  }
+  #mushroom {
+    display: none;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, #ffcc00 20%, #ff6600 60%, #333 100%);
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .blink {
+    animation: blink 1s infinite;
+  }
+  @keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  /* 건물 흔들림 */
+  .shake {
+    animation: shake 0.5s infinite;
+  }
+  @keyframes shake {
+    0% { transform: translate(0,0); }
+    25% { transform: translate(5px, -5px); }
+    50% { transform: translate(-5px, 5px); }
+    75% { transform: translate(5px, 5px); }
+    100% { transform: translate(0,0); }
+  }
+  /* 파편 효과 */
+  .debris {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #ccc;
+    animation: debrisFall 2s forwards;
+  }
+  @keyframes debrisFall {
+    0% { opacity: 1; transform: translate(0,0); }
+    100% { opacity: 0; transform: translate(100px, 300px); }
+  }
+</style>
+</head>
+<body>
+  <h1>도시 파괴 타이머</h1>
+  <div id="timer">00:00</div>
+
+  <div class="buttons">
+    <label>직접 설정: </label>
+    <input type="number" id="minutes" placeholder="분" min="0">
+    <input type="number" id="seconds" placeholder="초" min="0" max="59">
+    <button onclick="setCustomTimer()">시작</button>
+  </div>
+
+  <div class="buttons">
+    <button onclick="startTimer(180)">3분</button>
+    <button onclick="startTimer(300)">5분</button>
+    <button onclick="startTimer(600)">10분</button>
+    <button onclick="resetTimer()">리셋</button>
+  </div>
+
+  <div id="building"></div>
+  <div id="robot"></div>
+  <div id="bomb"></div>
+  <div id="mushroom"></div>
+
+<script>
+let countdown;
+let timeLeft;
+
+function setCustomTimer() {
+  const min = parseInt(document.getElementById('minutes').value) || 0;
+  const sec = parseInt(document.getElementById('seconds').value) || 0;
+  const total = min * 60 + sec;
+  if (total > 0) startTimer(total);
+}
+
+function startTimer(seconds) {
+  clearInterval(countdown);
+  timeLeft = seconds;
+  updateDisplay();
+  countdown = setInterval(() => {
+    timeLeft--;
+    updateDisplay();
+
+    const robot = document.getElementById('robot');
+    robot.style.left = (50 + (seconds - timeLeft)/seconds * 30) + "%";
+    robot.style.transform = "translateX(-50%) rotate(" + (Math.sin(timeLeft) * 10) + "deg)";
+
+    // 로봇이 건물 때릴 때 건물 흔들림 + 파편 생성
+    if (timeLeft % 15 === 0 && timeLeft > 0) {
+      const building = document.getElementById('building');
+      building.classList.add('shake');
+      spawnDebris();
+      setTimeout(() => building.classList.remove('shake'), 1000);
+    }
+
+    if (timeLeft === 10) {
+      let bomb = document.getElementById('bomb');
+      bomb.style.display = 'block';
+      bomb.classList.add('blink');
+    }
+
+    if (timeLeft <= 0) {
+      clearInterval(countdown);
+      let bomb = document.getElementById('bomb');
+      bomb.classList.remove('blink');
+      bomb.style.top = "50%";
+      setTimeout(() => {
+        bomb.style.display = 'none';
+        document.getElementById('mushroom').style.display = 'block';
+      }, 2000);
+    }
+  }, 1000);
+}
+
+function resetTimer() {
+  clearInterval(countdown);
+  timeLeft = 0;
+  updateDisplay();
+  document.getElementById('robot').style.left = "50%";
+  document.getElementById('bomb').style.display = 'none';
+  document.getElementById('mushroom').style.display = 'none';
+}
+
+function updateDisplay() {
+  let minutes = Math.floor(timeLeft / 60);
+  let seconds = timeLeft % 60;
+  document.getElementById('timer').textContent =
+    String(minutes).padStart(2, '0') + ":" + String(seconds).padStart(2, '0');
+}
+
+function spawnDebris() {
+  const building = document.getElementById('building');
+  for (let i = 0; i < 5; i++) {
+    const debris = document.createElement('div');
+    debris.className = 'debris';
+    debris.style.left = (building.offsetLeft + 50) + "px";
+    debris.style.top = (building.offsetTop + 50) + "px";
+    document.body.appendChild(debris);
+    setTimeout(() => debris.remove(), 2000);
+  }
+}
+</script>
+</body>
+</html>
